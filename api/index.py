@@ -308,10 +308,17 @@ def jaccard(a, b):
 # ============================================================
 
 def valid_uri(value):
-    return (
-        isinstance(value, str)
-        and URI_RE.fullmatch(value) is not None
-    )
+    if not isinstance(value, str):
+        return False
+
+    match = URI_RE.fullmatch(value)
+
+    if match is None:
+        return False
+
+    # URI_RE guarantees a non-empty bucket segment and a
+    # non-empty object portion after the first slash.
+    return True
 
 
 def valid_generation(value):
@@ -373,12 +380,22 @@ def valid_row(row):
     return True
 
 
+def _reject_json_constant(value):
+    # JSONL must contain standard JSON. Python's json module
+    # otherwise accepts NaN/Infinity as extensions.
+    raise ValueError(f"invalid JSON constant: {value}")
+
+
 def parse_jsonl(content):
     """
     Return:
         ("OK", rows)
         ("JSONL_INVALID", None)
         ("SCHEMA_INVALID", None)
+
+    JSONL records are separated by LF. CRLF is accepted because
+    a trailing CR is removed from each record. Other Unicode
+    line-separator characters are data, not JSONL delimiters.
     """
 
     if content == "":
@@ -386,15 +403,22 @@ def parse_jsonl(content):
 
     rows = []
 
-    # Keep JSONL semantics: every non-blank line is one JSON
-    # value. Blank lines are ignored.
-    for line in content.splitlines():
+    # JSONL is LF-delimited. Do not use splitlines(), because
+    # splitlines() also treats Unicode separators such as U+2028
+    # and U+2029 as record boundaries.
+    for line in content.split("\n"):
+
+        if line.endswith("\r"):
+            line = line[:-1]
 
         if line.strip() == "":
             continue
 
         try:
-            value = json.loads(line)
+            value = json.loads(
+                line,
+                parse_constant=_reject_json_constant,
+            )
         except Exception:
             return "JSONL_INVALID", None
 
