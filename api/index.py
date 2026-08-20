@@ -1009,7 +1009,7 @@ def build(body):
 # Endpoint
 # ============================================================
 
-@app.post("/build-corpus")
+@app.post("/api/build-corpus")
 async def build_corpus(request: Request):
 
     try:
