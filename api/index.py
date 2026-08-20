@@ -1009,9 +1009,7 @@ def build(body):
 # Endpoint
 # ============================================================
 
-@app.post("/api/build-corpus")
-async def build_corpus(request: Request):
-
+async def _build_corpus_endpoint(request: Request):
     try:
         body = await request.json()
     except Exception:
@@ -1021,3 +1019,23 @@ async def build_corpus(request: Request):
         )
 
     return build(body)
+
+
+@app.post("/build-corpus")
+async def build_corpus(request: Request):
+    return await _build_corpus_endpoint(request)
+
+
+@app.post("/api/build-corpus")
+async def api_build_corpus(request: Request):
+    return await _build_corpus_endpoint(request)
+
+
+@app.post("/build-corpus/build-corpus")
+async def duplicated_build_corpus(request: Request):
+    return await _build_corpus_endpoint(request)
+
+
+@app.post("/api/index")
+async def api_index(request: Request):
+    return await _build_corpus_endpoint(request)
